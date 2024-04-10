@@ -58,7 +58,7 @@ class get_offsets:
 
         '''
         This class will compute offsets between a reference catalog and an input source catalog. It identifies
-        matches between both catalogs (see find_matches function) then calculated the x, y and rotational( theta)
+        matches between both catalogs (see find_matches function) then calculates the x, y and rotational (theta)
         offset between the image and the reference frame.
 
         PARAMETERS
@@ -66,7 +66,7 @@ class get_offsets:
         file - str
             File path to fits file
         sciext - int
-            Science extension in fits file
+            Science extension containg the data for "file"
         refcat_df - pandas dataframe
             Dataframe containing RA, DEC, X pixel and Y pixel positions of reference catalog
         image_src_df - pandas dataframe
@@ -82,9 +82,11 @@ class get_offsets:
         num_it - int
             Number of iterations to perform when removing outliers during fitting
         distort_corr - bool
-            Whether or not image has been distortion corrected
+            Whether or not image used to detect the sources in image_src_df was distortion-corrected or not.
+            This affects how the skycoord_to_pixel function is implemented.
         origin - int (1 or 0)
-            Whether coordinates assume the origin to be (1,1) or (0,0)
+            Whether coordinates assume the origin to be (1,1) or (0,0).
+            This affects how the skycoord_to_pixel function is implemented.
         '''
         
         self.num_it = num_it
@@ -116,18 +118,12 @@ class get_offsets:
                                            ra_col = refcat_ra_column, dec_col = refcat_dec_column, 
                                            distort_corr = distort_corr, origin = origin)
         
-        # Get image source catalog that was generated on the image that isn't aligned to anything yet
-        # Also use RA and DEC from this catalog to get X and Y positions
-#         self.object_df = get_pixel_pos_refcat(file, image_src_df, sciext,
-#                                               ra_col = 'ra', dec_col = 'dec', 
-#                                               distort_corr = distort_corr, origin = origin)
         self.object_df = image_src_df
 
         # Whether or not image is distortion corrected
         self.distort_corr = distort_corr
         
         self.origin = origin
-        # print('!!! Origin = {}'.format(origin))
         
     # Find matches between the reference catalog and sources detected in the image
     def find_matches(self):
@@ -151,11 +147,9 @@ class get_offsets:
         if self.distort_corr == True:
             matches = skycoord_to_pixel(im_obj_coord[idx], wcs = file_wcs, origin = self.origin, mode = 'all')
         self.matches = matches
-
-        # print('{} matches found.'.format(len(matches[0])))
     
     # Drop a single bad object based on it's index (aka row number)
-    # This function is read intto drop_bad_object_all
+    # This function is read into drop_bad_object_all
     def drop_bad_object(self, refcat_x, refcat_y, image_x, image_y, bad_idx):
 
         # Bad x and y positions
@@ -172,7 +166,8 @@ class get_offsets:
 
         return deleted_x_arr, deleted_y_arr
     
-    # Drop all bad objects, where bad objects are defined to be those where the offset is greater than 100 pixels
+    # Drop all bad objects, where bad objects are defined to be those where the offset to its match
+    # is greater than 100 pixels
     def drop_bad_object_all(self, refcat_x, refcat_y, image_x, image_y, bad_match_dist):
 
         # Offsets compared to reference catalog
@@ -201,18 +196,15 @@ class get_offsets:
             return image_x, image_y
 
             
-    # Use scripts you made plus scipy.minimize to minimize the sum of the distances and find the shifts
+    # Minimize the sum of the distances between the object catalog and reference catalog and find the shifts
+    # needed to align them
     def find_shifts(self):
         
-        # refcat = self.refcat
         matches = self.matches
         
         hdr = self.hdu[self.sciext].header
         crpix1 = hdr['CRPIX1']
         crpix2 = hdr['CRPIX2']
-
-        ### NEW ###
-        # print('Iterating minimization...')
 
         # Find an initial solution using reference catalog positions and positions measured from image
         sol = minimize(vect_diff_sum, x0 = [0,0,0], args = (self.refcat['x'], self.refcat['y'], 
@@ -251,21 +243,12 @@ class get_offsets:
             final_x_1 = dropped_final_matches[0]
             final_y_1 = dropped_final_matches[1]
 
-            # Update dx, dy and theta values so that final value is the total shift + rotation
-            # dx += dx_i 
-            # dy += dy_i 
-            # theta += theta_i
-
         # Find FINAL ALIGNMENT USING CONSTRIANED SAMPLE!!
         sol = minimize(vect_diff_sum, x0 = [0,0,0], args = (self.refcat['x'], self.refcat['y'], 
                                                             self.matches[0], self.matches[1],
                                                             crpix1,crpix2))
         dx,dy,theta = sol.x
         final_x, final_y = offset(self.matches[0],self.matches[1],dx,dy,theta,crpix1,crpix2)
-            
-        # final_x = final_x_1
-        # final_y = final_y_1
-        ######
         
         self.final_x = final_x
         self.final_y = final_y
@@ -273,14 +256,12 @@ class get_offsets:
         self.dy = dy
         self.theta = theta
 
-    # Get offsets of objects in image to their corresponding reference catalog positions
+    # Get typical (median, mad, std) offsets of objects in image to their corresponding reference catalog positions
     def get_offsets_each(self, refcat_x, refcat_y, image_x, image_y):
 
         # Image objects (usually identified with sextractor or sep) offsets from reference catalog positions
         norm_sext_x = image_x-refcat_x
         norm_sext_y = image_y-refcat_y
-
-        # print('x median not clippeed:', np.median(norm_sext_x))
 
         # Get the median offsets, mad of the offset, and the std of the offset
         clipped_x = sigma_clip(norm_sext_x, sigma = 5)
