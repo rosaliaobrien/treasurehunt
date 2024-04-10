@@ -57,6 +57,10 @@ class get_offsets:
                  num_it = 5, distort_corr = False, origin = 1):
 
         '''
+        This class will compute offsets between a reference catalog and an input source catalog. It identifies
+        matches between both catalogs (see find_matches function) then calculated the x, y and rotational( theta)
+        offset between the image and the reference frame.
+
         PARAMETERS
         ----------
         file - str
@@ -123,7 +127,7 @@ class get_offsets:
         self.distort_corr = distort_corr
         
         self.origin = origin
-        print('!!! Origin = {}'.format(origin))
+        # print('!!! Origin = {}'.format(origin))
         
     # Find matches between the reference catalog and sources detected in the image
     def find_matches(self):
@@ -148,7 +152,7 @@ class get_offsets:
             matches = skycoord_to_pixel(im_obj_coord[idx], wcs = file_wcs, origin = self.origin, mode = 'all')
         self.matches = matches
 
-        print('{} matches found.'.format(len(matches[0])))
+        # print('{} matches found.'.format(len(matches[0])))
     
     # Drop a single bad object based on it's index (aka row number)
     # This function is read intto drop_bad_object_all
@@ -208,7 +212,7 @@ class get_offsets:
         crpix2 = hdr['CRPIX2']
 
         ### NEW ###
-        print('Iterating minimization...')
+        # print('Iterating minimization...')
 
         # Find an initial solution using reference catalog positions and positions measured from image
         sol = minimize(vect_diff_sum, x0 = [0,0,0], args = (self.refcat['x'], self.refcat['y'], 
@@ -354,14 +358,14 @@ class get_offsets:
         final_y_arcsec = self.final_y*self.pixel_scale
         
         # Make plot before shift is made
-        print('Making unaligned plot...')
+        # print('Making unaligned plot...')
         # print('Average x diff:', np.median(image_x_arcsec_og-refcat_x_arcsec))
         self.plot_offsets_subplot(ax1,
                                   refcat_x_arcsec,refcat_y_arcsec,image_x_arcsec_og,image_y_arcsec_og,
                                   tick_params = tick_params, title = 'Not Corrected', 
                                   limits = [-0.5,0.5,-0.5,0.5], text_pos = text_pos)
         
-        print('Making aligned plot...')
+        # print('Making aligned plot...')
         # Make plot showing offsets after shift is made
         self.plot_offsets_subplot(ax2,
                                   refcat_x_arcsec,refcat_y_arcsec,final_x_arcsec,final_y_arcsec,
@@ -445,8 +449,8 @@ class get_offsets:
                                                     self.final_x*self.pixel_scale, self.final_y*self.pixel_scale)
         self.norm_sext_x, self.norm_sext_y, self.final_x_median, self.final_y_median, self.final_x_mad, self.final_y_mad, self.final_x_std, self.final_y_std = self.offset_outputs
         
-        print('DX (arcsec): ', self.dx*self.pixel_scale)
-        print('DY (arcsec): ', self.dy*self.pixel_scale)
+        print('DX Offset (arcsec): ', self.dx*self.pixel_scale)
+        print('DY Offset (arcsec): ', self.dy*self.pixel_scale)
         
         if self.plot == True:
             self.plot_offsets()

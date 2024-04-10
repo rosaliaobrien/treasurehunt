@@ -33,12 +33,12 @@ class get_sources:
     
     def __init__(self, drz_file, sci_ext = 0, origin = 0):
         
-        print('Initializing ....')
+        # print('Initializing ....')
         hdu = fits.open(drz_file) # Read drizzled fits image
         self.hdu = hdu
         self.file = drz_file
 
-        print('Reading science array...')
+        # print('Reading science array...')
         sciarr = hdu[sci_ext].data # Get science data from the first exentions
         self.sciarr = sciarr
 
@@ -48,7 +48,7 @@ class get_sources:
         # self.drc_time = Time(date_obs, format = date_fmt).to_value('jyear') # Get reference epoch 
         # self.drc_time = drc_time
 
-        print('Reading WCS...')
+        # print('Reading WCS...')
         ### Get RA and DEC of Objects founnd ###
         drc_wcs = WCS(hdu[sci_ext].header)
         self.drc_wcs = drc_wcs
@@ -58,8 +58,8 @@ class get_sources:
         
         hdu.close()
         
-        print('Initialization complete.')
-        print('\n')
+        # print('Initialization complete.')
+        # print('\n')
 
     def mask_borders(self, data_og, border = 10):
         '''
@@ -217,7 +217,7 @@ class get_sources:
         # Get time of Gaia coords
         gaia_time = Time(gaia_query['ref_epoch'], 
                          format = 'jyear')
-        print('Gaia reference epoch: {}'.format(gaia_time))
+        # print('Gaia reference epoch: {}'.format(gaia_time))
 
         # Difference between drc image and gaia coords
         time_diff_yr = (drc_time-gaia_time.value)
